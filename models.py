@@ -9,7 +9,56 @@ from einops.layers.torch import Rearrange
 
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
-    
+
+class SharedParameterAbsCls(nn.Module):
+    def __init__(self, h, w, in_dim, out_dim):
+        super().__init__()
+        num_img_tokens = (2*h-1) * (2*w-1)
+        num_r_cls_tokens = h*w + 1
+        num_c_cls_tokens = h*w 
+        self.unique_params = nn.Parameter(torch.randn(num_img_tokens + num_r_cls_tokens + num_c_cls_tokens, in_dim, out_dim))
+
+        index_map = [[i for i in range(num_img_tokens, num_img_tokens + num_r_cls_tokens)]]
+        for x in range(h):
+            for y in range(w):
+                tmp = [num_img_tokens + num_r_cls_tokens + x*w+ y]
+                for i in range(h):
+                    for j in range(w):
+                        dx = x - i + h - 1
+                        dy = y - j + w - 1
+                        tmp.append(dx*(2*w-1) + dy)
+                index_map.append(tmp)
+        self.index_map = torch.tensor(index_map)
+
+    def forward(self):
+        weight = self.unique_params[self.index_map]
+        return weight
+
+class SharedParameterRelCls(nn.Module):
+    def __init__(self, h, w, in_dim, out_dim):
+        super().__init__()
+        num_img_tokens = (2*h-1) * (2*w-1)
+        idx_cls = num_img_tokens
+        idx_cls_in = num_img_tokens + 1
+        idx_cls_out = num_img_tokens + 2
+        self.unique_params = nn.Parameter(torch.randn(num_img_tokens + 3, in_dim, out_dim))
+
+        index_map = [[idx_cls] + [idx_cls_in for _ in range(h*w)]]
+        for x in range(h):
+            for y in range(w):
+                tmp = [idx_cls_out]
+                for i in range(h):
+                    for j in range(w):
+                        dx = x - i + h - 1
+                        dy = y - j + w - 1
+                        tmp.append(dx*(2*w-1) + dy)
+                index_map.append(tmp)
+        self.index_map = torch.tensor(index_map)
+
+    def forward(self):
+        weight = self.unique_params[self.index_map]
+        return weight
+
 class FeedForward(nn.Module):
     def __init__(self, dim, hidden_dim, dropout = 0.):
         super().__init__()
@@ -24,10 +73,6 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         return self.net(x)
-
-def para(in_dim, out_dim):
-    w = nn.init.kaiming_uniform_(torch.empty(in_dim, out_dim))
-    return nn.Parameter(w)
 
 class Attention(nn.Module):
     def __init__(self, hw_size, dim, heads = 8, dim_head = 64, dropout = 0.):
@@ -46,31 +91,7 @@ class Attention(nn.Module):
 
         self.to_qk = nn.Linear(dim, inner_dim * 2, bias = False)
         
-        shared_Ws = []
-        for i in range(2*h - 1):
-            tmp = []
-            for j in range(2*w - 1):
-                W = para(dim, inner_dim)
-                tmp.append(W)
-            shared_Ws.append(tmp)
-        # for cls token
-        tmp = []
-        for _ in range(1 + h*w):
-            W = para(dim, inner_dim)
-            tmp.append(W)
-        Ws = [torch.stack(tmp, dim=0)]
-        # for img patch
-        for x in range(h):
-            for y in range(w):
-                cls_W = para(dim, inner_dim)
-                tmp = [cls_W]
-                for i in range(h):
-                    for j in range(w):
-                        dx = x - i + h - 1
-                        dy = y - j + w - 1
-                        tmp.append(shared_Ws[dx][dy])
-                Ws.append(torch.stack(tmp, dim=0))
-        self.to_v = torch.stack(Ws, dim=0)
+        self.to_v = SharedParameterAbsCls(h, w, dim, inner_dim)
                 
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, dim),
@@ -89,7 +110,7 @@ class Attention(nn.Module):
 
         # value
         x = x.unsqueeze(2).unsqueeze(2)                             # b n 1 1   dim
-        w = self.to_v.unsqueeze(0).to(x.device)                     # 1 n n dim inner_dim
+        w = self.to_v().unsqueeze(0)                                # 1 n n dim inner_dim
         v = torch.matmul(x, w).squeeze(3)                           # b n n inner_dim
         v = rearrange(v, 'b n m (h d) -> b h n m d', h = self.heads)# b h n n d
         
@@ -161,5 +182,4 @@ class ViT(nn.Module):
         x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
         x = self.to_latent(x)
-        x = self.mlp_head(x)
-        return F.log_softmax(x, dim=1)
+        return self.mlp_head(x)
