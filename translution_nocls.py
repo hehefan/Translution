@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -15,7 +16,8 @@ class SharedParameter(nn.Module):
     def __init__(self, h, w, in_dim, out_dim):
         super().__init__()
         num_tokens = (2*h-1) * (2*w-1)
-        self.unique_params = nn.Parameter(torch.randn(num_tokens, in_dim, out_dim))
+        self.unique_params = nn.Parameter(torch.empty(num_tokens, in_dim, out_dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
         index_map = []
         for x in range(h):
@@ -23,9 +25,9 @@ class SharedParameter(nn.Module):
                 tmp = []
                 for i in range(h):
                     for j in range(w):
-                        dx = x - i + h - 1
-                        dy = y - j + w - 1
-                        tmp.append(dx*(2*w-1) + dy)
+                        dx = x - i + h - 1 
+                        dy = y - j + w - 1 
+                        tmp.append(dx*(2*w-1) + dy) 
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
 
@@ -64,9 +66,10 @@ class Attention(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         self.to_qk = nn.Linear(dim, inner_dim * 2, bias = False)
-        
+        self.v = nn.Linear(dim, inner_dim, bias = False)
+
         self.to_v = SharedParameter(h, w, dim, inner_dim)
-                
+
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, dim),
             nn.Dropout(dropout)
@@ -74,7 +77,7 @@ class Attention(nn.Module):
 
     def forward(self, x):
         x = self.norm(x)
-       
+
         # attention 
         qk = self.to_qk(x).chunk(2, dim = -1)
         q, k = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qk)
@@ -83,15 +86,15 @@ class Attention(nn.Module):
         attn = self.dropout(attn)                                   # b h n n
 
         # value
-        x = x.unsqueeze(2).unsqueeze(2)                             # b n 1 1   dim
+        x = x.unsqueeze(1).unsqueeze(3)                             # b 1 n 1   dim
         w = self.to_v().unsqueeze(0)                                # 1 n n dim inner_dim
         v = torch.matmul(x, w).squeeze(3)                           # b n n inner_dim
         v = rearrange(v, 'b n m (h d) -> b h n m d', h = self.heads)# b h n n d
-        
+
         # sum
         out = attn.unsqueeze(-1) * v                                # b h n n d
         out = torch.sum(out, dim=3, keepdim=False)                  # b h n d
- 
+
         # output
         out = rearrange(out, 'b h n d -> b n (h d)')
         return self.to_out(out)
