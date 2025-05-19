@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -14,8 +15,9 @@ class SharedParameter(nn.Module):
     def __init__(self, h, w, dim):
         super().__init__()
         num_tokens = (2*h-1) * (2*w-1)
-        self.unique_params = nn.Parameter(torch.randn(num_tokens, dim))
-
+        self.unique_params = nn.Parameter(torch.empty(num_tokens, dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
+        
         index_map = []
         for x in range(h):
             for y in range(w):
@@ -83,7 +85,7 @@ class Attention(nn.Module):
         attn = self.dropout(attn)                                   # b h n n
 
         # value v: [b n inner_dim]
-        v = v.unsqueeze(2)                                          # b n 1 inner_dim
+        v = v.unsqueeze(1)                                          # b 1 n inner_dim
         r_pos = self.r_pos().unsqueeze(0)                           # 1 n n inner_dim
         v = v + r_pos                                               # b n n inner_dim
         v = rearrange(v, 'b n m (h d) -> b h n m d', h = self.heads)# b h n n d
