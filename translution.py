@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -16,7 +17,8 @@ class SharedParameterAbsCls(nn.Module):
         num_img_tokens = (2*h-1) * (2*w-1)
         num_r_cls_tokens = h*w + 1
         num_c_cls_tokens = h*w 
-        self.unique_params = nn.Parameter(torch.randn(num_img_tokens + num_r_cls_tokens + num_c_cls_tokens, in_dim, out_dim))
+        self.unique_params = nn.Parameter(torch.empty(num_img_tokens + num_r_cls_tokens + num_c_cls_tokens, in_dim, out_dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
         index_map = [[i for i in range(num_img_tokens, num_img_tokens + num_r_cls_tokens)]]
         for x in range(h):
@@ -41,7 +43,8 @@ class SharedParameterRelCls(nn.Module):
         idx_cls = num_img_tokens
         idx_cls_in = num_img_tokens + 1
         idx_cls_out = num_img_tokens + 2
-        self.unique_params = nn.Parameter(torch.randn(num_img_tokens + 3, in_dim, out_dim))
+        self.unique_params = nn.Parameter(torch.empty(num_img_tokens + 3, in_dim, out_dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
         index_map = [[idx_cls] + [idx_cls_in for _ in range(h*w)]]
         for x in range(h):
@@ -109,7 +112,7 @@ class Attention(nn.Module):
         attn = self.dropout(attn)                                   # b h n n
 
         # value
-        x = x.unsqueeze(2).unsqueeze(2)                             # b n 1 1   dim
+        x = x.unsqueeze(1).unsqueeze(3)                             # b 1 n 1   dim
         w = self.to_v().unsqueeze(0)                                # 1 n n dim inner_dim
         v = torch.matmul(x, w).squeeze(3)                           # b n n inner_dim
         v = rearrange(v, 'b n m (h d) -> b h n m d', h = self.heads)# b h n n d
