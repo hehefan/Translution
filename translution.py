@@ -21,13 +21,13 @@ class SharedParameterAbsCls(nn.Module):
         torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
         index_map = [[i for i in range(num_img_tokens, num_img_tokens + num_r_cls_tokens)]]
-        for x in range(h):
-            for y in range(w):
+        for x in range(height):
+            for y in range(width):
                 tmp = [num_img_tokens + num_r_cls_tokens + x*width+ y]
-                for i in range(h):
-                    for j in range(w):
-                        dx = x - i + h - 1
-                        dy = y - j + w - 1
+                for i in range(height):
+                    for j in range(width):
+                        dx = x - i + height - 1
+                        dy = y - j + width - 1
                         tmp.append(dx*(2*width-1) + dy)
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
@@ -47,13 +47,13 @@ class SharedParameterRelCls(nn.Module):
         torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
         index_map = [[idx_cls] + [idx_cls_in for _ in range(height*width)]]
-        for x in range(h):
-            for y in range(w):
+        for x in range(height):
+            for y in range(width):
                 tmp = [idx_cls_out]
-                for i in range(h):
-                    for j in range(w):
-                        dx = x - i + h - 1
-                        dy = y - j + w - 1
+                for i in range(height):
+                    for j in range(width):
+                        dx = x - i + height - 1
+                        dy = y - j + width - 1
                         tmp.append(dx*(2*width-1) + dy)
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
