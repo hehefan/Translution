@@ -68,7 +68,7 @@ class Attention(nn.Module):
         self.to_qk = nn.Linear(dim, inner_dim * 2, bias = False)
         self.v = nn.Linear(dim, inner_dim, bias = False)
 
-        self.to_v = SharedParameter(height, width dim, inner_dim)
+        self.to_v = SharedParameter(height, width, dim, inner_dim)
 
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, dim),
