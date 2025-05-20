@@ -19,13 +19,13 @@ class SharedParameter(nn.Module):
         torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
         
         index_map = []
-        for x in range(h):
-            for y in range(w):
+        for x in range(height):
+            for y in range(width):
                 tmp = []
-                for i in range(h):
-                    for j in range(w):
-                        dx = x - i + h - 1
-                        dy = y - j + w - 1
+                for i in range(height):
+                    for j in range(width):
+                        dx = x - i + height - 1
+                        dy = y - j + width - 1
                         tmp.append(dx*(2*width-1) + dy)
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
