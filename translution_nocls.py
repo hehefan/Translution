@@ -25,8 +25,8 @@ class SharedParameter(nn.Module):
                 tmp = []
                 for i in range(height):
                     for j in range(width):
-                        dx = x - i + h - 1 
-                        dy = y - j + w - 1 
+                        dx = x - i + height - 1 
+                        dy = y - j + width - 1 
                         tmp.append(dx*(2*width-1) + dy) 
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
