@@ -12,23 +12,23 @@ def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
 class SharedParameterAbsCls(nn.Module):
-    def __init__(self, h, w, in_dim, out_dim):
+    def __init__(self, height, width, in_dim, out_dim):
         super().__init__()
-        num_img_tokens = (2*h-1) * (2*w-1)
-        num_r_cls_tokens = h*w + 1
-        num_c_cls_tokens = h*w 
+        num_img_tokens = (2*height-1) * (2*width-1)
+        num_r_cls_tokens = height * width + 1
+        num_c_cls_tokens = height * width
         self.unique_params = nn.Parameter(torch.empty(num_img_tokens + num_r_cls_tokens + num_c_cls_tokens, in_dim, out_dim))
         torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
         index_map = [[i for i in range(num_img_tokens, num_img_tokens + num_r_cls_tokens)]]
         for x in range(h):
             for y in range(w):
-                tmp = [num_img_tokens + num_r_cls_tokens + x*w+ y]
+                tmp = [num_img_tokens + num_r_cls_tokens + x*width+ y]
                 for i in range(h):
                     for j in range(w):
                         dx = x - i + h - 1
                         dy = y - j + w - 1
-                        tmp.append(dx*(2*w-1) + dy)
+                        tmp.append(dx*(2*width-1) + dy)
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
 
@@ -37,16 +37,16 @@ class SharedParameterAbsCls(nn.Module):
         return weight
 
 class SharedParameterRelCls(nn.Module):
-    def __init__(self, h, w, in_dim, out_dim):
+    def __init__(self, height, width, in_dim, out_dim):
         super().__init__()
-        num_img_tokens = (2*h-1) * (2*w-1)
+        num_img_tokens = (2*height-1) * (2*width-1)
         idx_cls = num_img_tokens
         idx_cls_in = num_img_tokens + 1
         idx_cls_out = num_img_tokens + 2
         self.unique_params = nn.Parameter(torch.empty(num_img_tokens + 3, in_dim, out_dim))
         torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
-        index_map = [[idx_cls] + [idx_cls_in for _ in range(h*w)]]
+        index_map = [[idx_cls] + [idx_cls_in for _ in range(height*width)]]
         for x in range(h):
             for y in range(w):
                 tmp = [idx_cls_out]
@@ -54,7 +54,7 @@ class SharedParameterRelCls(nn.Module):
                     for j in range(w):
                         dx = x - i + h - 1
                         dy = y - j + w - 1
-                        tmp.append(dx*(2*w-1) + dy)
+                        tmp.append(dx*(2*width-1) + dy)
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
 
@@ -83,7 +83,7 @@ class Attention(nn.Module):
         inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)
 
-        h, w = hw_size
+        height, width = hw_size
         self.heads = heads
         self.scale = dim_head ** -0.5
 
@@ -94,7 +94,7 @@ class Attention(nn.Module):
 
         self.to_qk = nn.Linear(dim, inner_dim * 2, bias = False)
         
-        self.to_v = SharedParameterAbsCls(h, w, dim, inner_dim)
+        self.to_v = SharedParameterAbsCls(height, width, dim, inner_dim)
                 
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, dim),
