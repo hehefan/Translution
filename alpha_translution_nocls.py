@@ -12,9 +12,9 @@ def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
 class SharedParameter(nn.Module):
-    def __init__(self, h, w, dim):
+    def __init__(self, height, width, dim):
         super().__init__()
-        num_tokens = (2*h-1) * (2*w-1)
+        num_tokens = (2*height-1) * (2*width-1)
         self.unique_params = nn.Parameter(torch.empty(num_tokens, dim))
         torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
         
@@ -26,7 +26,7 @@ class SharedParameter(nn.Module):
                     for j in range(w):
                         dx = x - i + h - 1
                         dy = y - j + w - 1
-                        tmp.append(dx*(2*w-1) + dy)
+                        tmp.append(dx*(2*width-1) + dy)
                 index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
 
@@ -55,7 +55,7 @@ class Attention(nn.Module):
         inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)
 
-        h, w = hw_size
+        height, width = hw_size
         self.heads = heads
         self.scale = dim_head ** -0.5
 
@@ -66,7 +66,7 @@ class Attention(nn.Module):
 
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
         
-        self.r_pos = SharedParameter(h, w, inner_dim)
+        self.r_pos = SharedParameter(height, width, inner_dim)
                 
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, dim),
@@ -153,3 +153,29 @@ class ViT(nn.Module):
 
         x = self.to_latent(x)
         return self.mlp_head(x)
+
+def vit_b_32():
+    return ViT(image_size=224, 
+               patch_size=32, 
+               num_classes=1000, 
+               dim=768, 
+               depth=12, 
+               heads=12, 
+               mlp_dim=3072, 
+               channels = 3,  
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
+
+def vit_b_56():
+    return ViT(image_size=224, 
+               patch_size=56, 
+               num_classes=1000, 
+               dim=768, 
+               depth=12, 
+               heads=12, 
+               mlp_dim=3072, 
+               channels = 3,  
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
