@@ -189,14 +189,14 @@ class ViT(nn.Module):
         x = self.to_latent(x)
         return self.mlp_head(x)
 
-def vit_mini_56():
-    return ViT(image_size=224,
-               patch_size=56,
-               num_classes=1000,
-               dim=192,
-               depth=6,
-               heads=3,
-               mlp_dim=768,
+def vit_mini_p56():
+    return ViT(image_size = 224,
+               patch_size = 56,
+               num_classes = 1000,
+               dim = 192,
+               depth = 6,
+               heads = 3,
+               mlp_dim = 768,
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
