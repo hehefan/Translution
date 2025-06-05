@@ -11,6 +11,7 @@ from einops.layers.torch import Rearrange
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
+# absolute cls token 
 class SharedParameterAbsCls(nn.Module):
     def __init__(self, height, width, in_dim, out_dim):
         super().__init__()
@@ -36,6 +37,7 @@ class SharedParameterAbsCls(nn.Module):
         weight = self.unique_params[self.index_map]
         return weight
 
+# relative cls token 
 class SharedParameterRelCls(nn.Module):
     def __init__(self, height, width, in_dim, out_dim):
         super().__init__()
@@ -94,7 +96,7 @@ class Attention(nn.Module):
 
         self.to_qk = nn.Linear(dim, inner_dim * 2, bias = False)
         
-        self.to_v = SharedParameterAbsCls(height, width, dim, inner_dim)
+        self.to_v = SharedParameterRelCls(height, width, dim, inner_dim)
                 
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, dim),
@@ -186,3 +188,16 @@ class ViT(nn.Module):
 
         x = self.to_latent(x)
         return self.mlp_head(x)
+
+def vit_mini_56():
+    return ViT(image_size=224,
+               patch_size=56,
+               num_classes=1000,
+               dim=192,
+               depth=6,
+               heads=3,
+               mlp_dim=768,
+               channels = 3,
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
