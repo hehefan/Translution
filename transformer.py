@@ -125,3 +125,73 @@ class ViT(nn.Module):
 
         x = self.to_latent(x)
         return self.mlp_head(x)
+
+def vit_mini(image_size = 224, patch_size = 16, num_classes = 1000, pool = 'cls'):
+    return ViT(image_size = image_size,
+               patch_size = patch_size,
+               num_classes = num_classes,
+               dim = 192,
+               depth = 6,
+               heads = 3,
+               mlp_dim = 768,
+               pool = pool,
+               channels = 3,
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
+
+def vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000, pool = 'cls'):
+    return ViT(image_size = image_size,
+               patch_size = patch_size,
+               num_classes = num_classes,
+               dim = 192,
+               depth = 12, 
+               heads = 3,
+               mlp_dim = 768,
+               pool = pool,
+               channels = 3,
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
+
+def vit_small(image_size = 224, patch_size = 16, num_classes = 1000, pool = 'cls'):
+    return ViT(image_size = image_size,
+               patch_size = patch_size,
+               num_classes = num_classes,
+               dim = 384,
+               depth = 12, 
+               heads = 6,
+               mlp_dim = 1536,
+               pool = pool,
+               channels = 3,
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
+
+def vit_base(image_size = 224, patch_size = 16, num_classes = 1000, pool = 'cls'):
+    return ViT(image_size = image_size,
+               patch_size = patch_size,
+               num_classes = num_classes,
+               dim = 768,
+               depth = 12, 
+               heads = 12, 
+               mlp_dim = 3072,
+               pool = pool,
+               channels = 3,
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
+
+def vit_large(image_size = 224, patch_size = 16, num_classes = 1000, pool = 'cls'):
+    return ViT(image_size = image_size,
+               patch_size = patch_size,
+               num_classes = num_classes,
+               dim = 1024,
+               depth = 24, 
+               heads = 16, 
+               mlp_dim = 4096,
+               pool = pool,
+               channels = 3,
+               dim_head = 64, 
+               dropout = 0., 
+               emb_dropout = 0.) 
