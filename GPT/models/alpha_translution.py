@@ -9,6 +9,27 @@ from einops.layers.torch import Rearrange
 class SharedParameter(nn.Module):
     def __init__(self, length, in_dim, out_dim):
         super().__init__()
+        num_weights = 2*length - 1 
+        self.unique_params = nn.Parameter(torch.empty(num_weights, in_dim, out_dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
+
+        index_map = []
+        for i in range(length):
+            tmp = []
+            for j in range(length):
+                d = i - j + length - 1 
+                tmp.append(d)
+            index_map.append(tmp)
+        self.index_map = torch.tensor(index_map)
+
+    def forward(self):
+        weight = self.unique_params[self.index_map]
+        return weight
+
+class CausalSharedParameter(nn.Module):
+    def __init__(self, length, in_dim, out_dim):
+        super().__init__()
+        # casual
         self.unique_params = nn.Parameter(torch.empty(length, in_dim, out_dim))
         torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
 
@@ -60,7 +81,7 @@ class Attention(nn.Module):
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
 
         self.to_v1 = nn.Linear(dim, dim_relenc * heads, bias = False)
-        self.to_v2 = SharedParameter(self.seq_len, dim_relenc * heads, dim_relenc * heads)
+        self.to_v2 = CausalSharedParameter(self.seq_len, dim_relenc * heads, dim_relenc * heads)
         self.to_v3 = nn.Linear(dim_relenc * heads, inner_dim, bias = False)
 
         self.to_out = nn.Sequential(
