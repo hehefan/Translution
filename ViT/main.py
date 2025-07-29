@@ -38,11 +38,11 @@ parser.add_argument('--image-size', default=224, type=int, metavar='N',
 parser.add_argument('--patch-size', default=56, type=int, metavar='N',
                     help='size of each patch that an image is divided ' + 
                         'into before being processed (default: 56)')
-parser.add_argument('--relenc-dim', default=16, type=int, metavar='N',
+parser.add_argument('--relenc-dim', default=8, type=int, metavar='N',
                     help='relative encoding dimension for the Value of ' +
-                        'alpha-Translution (default: 16)')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
+                        'alpha-Translution (default: 8)')
+parser.add_argument('-j', '--workers', default=16, type=int, metavar='N',
+                    help='number of data loading workers (default: 16)')
 parser.add_argument('--epochs', default=300, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
