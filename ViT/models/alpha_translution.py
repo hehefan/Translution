@@ -127,11 +127,10 @@ class Attention(nn.Module):
         # output2
         out2 = attn.unsqueeze(-1) * v2                                  # b h n n d
         out2 = torch.sum(out2, dim=3, keepdim=False)                    # b h n d
-
-        # output
         out2 = rearrange(out2, 'b h n d -> b n (h d)')
         out2 = self.to_v3(out2)
 
+        # output
         return self.to_out((out1 + out2)/2)
 
 class Translution(nn.Module):
