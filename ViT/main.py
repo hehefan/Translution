@@ -32,7 +32,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_vit_mini',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: alpha_translution with vit_mini)')
+                        ' (default: alution_vit_mini)')
 parser.add_argument('--image-size', default=224, type=int, metavar='N',
                     help='resolution of the input image (default: 224)')
 parser.add_argument('--patch-size', default=56, type=int, metavar='N',
