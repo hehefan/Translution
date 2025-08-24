@@ -114,7 +114,7 @@ class Attention(nn.Module):
         k2 = k2.unsqueeze(1).unsqueeze(3)                               # b 1 n 1   dim
         w_k = self.to_k2().unsqueeze(0)                                 # 1 n n dim C
         k2 = torch.matmul(k2, w_k).squeeze(3)                           # b n n C
-        k2 = rearrange(k2, 'b n m (h d) -> b h m n d', h = self.heads)  # b h n n d
+        k2 = rearrange(k2, 'b n m (h d) -> b h n m d', h = self.heads)  # b h n n d
 
         # value2
         v2 = self.to_v1(x)
