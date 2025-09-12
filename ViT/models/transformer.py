@@ -124,7 +124,7 @@ class ViT(nn.Module):
         x = self.to_latent(x)
         return self.mlp_head(x)
 
-def former_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def former_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
@@ -137,7 +137,7 @@ def former_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def former_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def former_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
