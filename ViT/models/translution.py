@@ -127,7 +127,7 @@ class Translution(nn.Module):
         return self.norm(x)
 
 class ViT(nn.Module):
-    def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.):
+    def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0., pos_embedding = False):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
@@ -144,7 +144,10 @@ class ViT(nn.Module):
             nn.Linear(patch_dim, dim),
             nn.LayerNorm(dim),
         )
-
+        if pos_embedding:
+            self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
+        else:
+            self.pos_embedding = False
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
@@ -161,6 +164,8 @@ class ViT(nn.Module):
 
         cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b = b)
         x = torch.cat((cls_tokens, x), dim=1)
+        if self.pos_embedding:
+            x += self.pos_embedding[:, :(n + 1)]
         x = self.dropout(x)                 # b, 1 + h*w, dim
 
         x = self.translution(x)
@@ -170,7 +175,7 @@ class ViT(nn.Module):
         x = self.to_latent(x)
         return self.mlp_head(x)
 
-def lution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def lution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
@@ -183,7 +188,7 @@ def lution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def lution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def lution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
