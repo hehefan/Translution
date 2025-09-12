@@ -108,7 +108,7 @@ class GPT(nn.Module):
 
         return self.output_head(x)
 
-def former_gpt_mini(seq_len, vocab_size):
+def former_gpt_tiny(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
@@ -119,7 +119,7 @@ def former_gpt_mini(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def former_gpt_tiny(seq_len, vocab_size):
+def former_gpt_mini(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
