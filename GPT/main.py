@@ -29,7 +29,7 @@ model_names = sorted(name for name in models.__dict__
 parser = argparse.ArgumentParser(description='PyTorch OpenWebText Training')
 parser.add_argument('data', metavar='DIR', nargs='?', default='/data/fhh/openwebtext',
                     help='path to dataset (default: openwebtext)')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_gpt_mini',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_gpt_tiny',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
