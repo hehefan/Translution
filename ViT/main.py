@@ -28,11 +28,11 @@ model_names = sorted(name for name in models.__dict__
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('data', metavar='DIR', nargs='?', default='/data/fhh/imagenet',
                     help='path to dataset (default: imagenet)')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_vit_mini',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_vit_tiny',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: alution_vit_mini)')
+                        ' (default: alution_vit_tiny)')
 parser.add_argument('--image-size', default=224, type=int, metavar='N',
                     help='resolution of the input image (default: 224)')
 parser.add_argument('--patch-size', default=56, type=int, metavar='N',
