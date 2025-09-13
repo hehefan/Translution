@@ -26,7 +26,7 @@ class SharedParameter(nn.Module):
         weight = self.unique_params[self.index_map]
         return weight
 
-class CausalSharedParameter(nn.Module):
+class CausalSharedParameter1(nn.Module):
     def __init__(self, length, in_dim, out_dim):
         super().__init__()
         # causual
@@ -39,6 +39,27 @@ class CausalSharedParameter(nn.Module):
             for j in range(length):
                 # causual
                 d = max(0, i - j) 
+                tmp.append(d)
+            index_map.append(tmp)
+        self.index_map = torch.tensor(index_map)
+
+    def forward(self):
+        weight = self.unique_params[self.index_map]
+        return weight
+
+class CausalSharedParameter2(nn.Module):
+    def __init__(self, length, in_dim, out_dim):
+        super().__init__()
+        # causual
+        self.unique_params = nn.Parameter(torch.empty(length, in_dim, out_dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
+
+        index_map = []
+        for i in range(length):
+            tmp = []
+            for j in range(length):
+                # causual
+                d = min(0, i - j) + length - 1
                 tmp.append(d)
             index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
@@ -77,13 +98,13 @@ class Attention(nn.Module):
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
         
         self.to_q1 = nn.Linear(dim, dim_relenc * heads, bias = False)
-        self.to_q2 = CausalSharedParameter(self.seq_len, dim_relenc * heads, dim_relenc * heads)
+        self.to_q2 = CausalSharedParameter1(self.seq_len, dim_relenc * heads, dim_relenc * heads)
         
         self.to_k1 = nn.Linear(dim, dim_relenc * heads, bias = False)
-        self.to_k2 = CausalSharedParameter(self.seq_len, dim_relenc * heads, dim_relenc * heads)
+        self.to_k2 = CausalSharedParameter2(self.seq_len, dim_relenc * heads, dim_relenc * heads)
 
         self.to_v1 = nn.Linear(dim, dim_relenc * heads, bias = False)
-        self.to_v2 = CausalSharedParameter(self.seq_len, dim_relenc * heads, dim_relenc * heads)
+        self.to_v2 = CausalSharedParameter1(self.seq_len, dim_relenc * heads, dim_relenc * heads)
         self.to_v3 = nn.Linear(dim_relenc * heads, inner_dim, bias = False)
 
         self.attend = nn.Softmax(dim = -1)
@@ -114,7 +135,7 @@ class Attention(nn.Module):
         k2 = k2.unsqueeze(1).unsqueeze(3)                               # b 1 n 1   dim
         w_k = self.to_k2().unsqueeze(0)                                 # 1 n n dim C
         k2 = torch.matmul(k2, w_k).squeeze(3)                           # b n n C
-        k2 = rearrange(k2, 'b n m (h d) -> b h n m d', h = self.heads)  # b h n n d
+        k2 = rearrange(k2, 'b n m (h d) -> b h m n d', h = self.heads)  # b h n n d
 
         # value2
         v2 = self.to_v1(x)
@@ -165,9 +186,13 @@ class Translution(nn.Module):
         return self.norm(x)
 
 class GPT(nn.Module):
-    def __init__(self, *, seq_len, vocab_size, dim, depth, heads, mlp_dim, dim_head = 64, dim_relenc = 16, dropout = 0., emb_dropout = 0.):
+    def __init__(self, *, seq_len, vocab_size, dim, depth, heads, mlp_dim, dim_head = 64, dim_relenc = 16, dropout = 0., emb_dropout = 0., pos_embedding = False):
         super().__init__()
 
+        if pos_embedding:
+            self.wpe = nn.Embedding(seq_len, dim)
+        else:
+            self.wpe = False
         self.wte = nn.Embedding(vocab_size, dim)
 
         self.dropout = nn.Dropout(emb_dropout)
@@ -182,6 +207,10 @@ class GPT(nn.Module):
         b, n = x.shape
         
         x = self.wte(x)
+
+        if self.wpe:
+            pos = torch.arange(0, n, dtype=torch.long, device=device)
+            x += self.wpe(pos)
         
         x = self.dropout(x)
 
@@ -191,7 +220,7 @@ class GPT(nn.Module):
 
         return self.output_head(x)
 
-def alution_gpt_mini(seq_len, vocab_size, dim_relenc = 16):
+def alution_gpt_tiny(seq_len, vocab_size, dim_relenc = 16):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
@@ -203,7 +232,7 @@ def alution_gpt_mini(seq_len, vocab_size, dim_relenc = 16):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def alution_gpt_tiny(seq_len, vocab_size, dim_relenc = 16):
+def alution_gpt_mini(seq_len, vocab_size, dim_relenc = 16):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
