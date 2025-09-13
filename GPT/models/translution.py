@@ -26,7 +26,7 @@ class SharedParameter(nn.Module):
         weight = self.unique_params[self.index_map]
         return weight
 
-class CausalSharedParameter(nn.Module):
+class CausalSharedParameter1(nn.Module):
     def __init__(self, length, in_dim, out_dim):
         super().__init__()
         # causual
@@ -39,6 +39,27 @@ class CausalSharedParameter(nn.Module):
             for j in range(length):
                 # causual
                 d = max(0, i - j) 
+                tmp.append(d)
+            index_map.append(tmp)
+        self.index_map = torch.tensor(index_map)
+
+    def forward(self):
+        weight = self.unique_params[self.index_map]
+        return weight
+
+class CausalSharedParameter2(nn.Module):
+    def __init__(self, length, in_dim, out_dim):
+        super().__init__()
+        # causual
+        self.unique_params = nn.Parameter(torch.empty(length, in_dim, out_dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
+
+        index_map = []
+        for i in range(length):
+            tmp = []
+            for j in range(length):
+                # causual
+                d = min(0, i - j) + length - 1
                 tmp.append(d)
             index_map.append(tmp)
         self.index_map = torch.tensor(index_map)
@@ -74,9 +95,9 @@ class Attention(nn.Module):
 
         self.norm = nn.LayerNorm(dim)
 
-        self.to_q = CausalSharedParameter(self.seq_len, dim, inner_dim)
-        self.to_k = CausalSharedParameter(self.seq_len, dim, inner_dim)
-        self.to_v = CausalSharedParameter(self.seq_len, dim, inner_dim)
+        self.to_q = CausalSharedParameter1(self.seq_len, dim, inner_dim)
+        self.to_k = CausalSharedParameter2(self.seq_len, dim, inner_dim)
+        self.to_v = CausalSharedParameter1(self.seq_len, dim, inner_dim)
     
         self.attend = nn.Softmax(dim = -1)
         self.dropout = nn.Dropout(dropout)
@@ -99,7 +120,7 @@ class Attention(nn.Module):
         # key
         w_k = self.to_k().unsqueeze(0)                              # 1 n n dim inner_dim
         k = torch.matmul(x, w_k).squeeze(3)                         # b n n inner_dim
-        k = rearrange(k, 'b n m (h d) -> b h n m d', h = self.heads)# b h n n d
+        k = rearrange(k, 'b n m (h d) -> b h m n d', h = self.heads)# b h n n d
         
         # value
         w_v = self.to_v().unsqueeze(0)                              # 1 n n dim inner_dim
@@ -140,9 +161,13 @@ class Translution(nn.Module):
         return self.norm(x)
 
 class GPT(nn.Module):
-    def __init__(self, *, seq_len, vocab_size, dim, depth, heads, mlp_dim, dim_head = 64, dropout = 0., emb_dropout = 0.):
+    def __init__(self, *, seq_len, vocab_size, dim, depth, heads, mlp_dim, dim_head = 64, dropout = 0., emb_dropout = 0., pos_embedding = False):
         super().__init__()
 
+        if pos_embedding:
+            self.wpe = nn.Embedding(seq_len, dim)
+        else:
+            self.wpe = False
         self.wte = nn.Embedding(vocab_size, dim)
 
         self.dropout = nn.Dropout(emb_dropout)
@@ -158,6 +183,9 @@ class GPT(nn.Module):
         b, n = x.shape
         
         x = self.wte(x)
+        if self.wpe:
+            pos = torch.arange(0, n, dtype=torch.long, device=device)
+            x += self.wpe(pos)
         
         x = self.dropout(x)
 
@@ -167,7 +195,7 @@ class GPT(nn.Module):
 
         return self.output_head(x)
 
-def lution_gpt_mini(seq_len, vocab_size):
+def lution_gpt_tiny(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
@@ -178,7 +206,7 @@ def lution_gpt_mini(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def lution_gpt_tiny(seq_len, vocab_size):
+def lution_gpt_mini(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
