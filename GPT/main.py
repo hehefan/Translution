@@ -33,7 +33,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_gpt_tiny',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: alution_gpt_mini)')
+                        ' (default: alution_gpt_tiny)')
 parser.add_argument('--seq-len', default=160, type=int, metavar='N',
                     help='sequence length or context length that refers to the maximum number of ' + 
                         'tokens the model can process in a single forward pass. (default: 256)')
