@@ -145,8 +145,8 @@ class TNN(nn.Module):
             ]))
 
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
+        for translution, ff in self.layers:
+            x = translution(x) + x
             x = ff(x) + x
 
         return self.norm(x)
