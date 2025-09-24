@@ -83,7 +83,7 @@ class FeedForward(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class Attention(nn.Module):
+class Translution(nn.Module):
     def __init__(self, seq_len, dim, heads = 8, dim_head = 64, dropout = 0.):
         super().__init__()
         self.seq_len = seq_len
@@ -142,20 +142,20 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         return self.to_out(out)
 
-class Translution(nn.Module):
+class TNN(nn.Module):
     def __init__(self, seq_len, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                Attention(seq_len, dim, heads = heads, dim_head = dim_head, dropout = dropout),
+                Translution(seq_len, dim, heads = heads, dim_head = dim_head, dropout = dropout),
                 FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
 
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
+        for translution, ff in self.layers:
+            x = translution(x) + x
             x = ff(x) + x
 
         return self.norm(x)
@@ -172,7 +172,7 @@ class GPT(nn.Module):
 
         self.dropout = nn.Dropout(emb_dropout)
         
-        self.translution = Translution(seq_len, dim, depth, heads, dim_head, mlp_dim, dropout)
+        self.translution = TNN(seq_len, dim, depth, heads, dim_head, mlp_dim, dropout)
 
         self.norm = nn.LayerNorm(dim)
         
