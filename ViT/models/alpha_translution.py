@@ -52,7 +52,7 @@ class FeedForward(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class Attention(nn.Module):
+class Translution(nn.Module):
     def __init__(self, hw_size, dim, heads = 8, dim_head = 64, dim_relenc = 16, dropout = 0.):
         super().__init__()
         inner_dim = dim_head *  heads
@@ -133,14 +133,14 @@ class Attention(nn.Module):
         # output
         return self.to_out((out1 + out2)/2)
 
-class Translution(nn.Module):
+class TNN(nn.Module):
     def __init__(self, hw_size, dim, depth, heads, dim_head, mlp_dim, dim_relenc = 16, dropout = 0.):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                Attention(hw_size, dim, heads = heads, dim_head = dim_head, dim_relenc = dim_relenc, dropout = dropout),
+                Translution(hw_size, dim, heads = heads, dim_head = dim_head, dim_relenc = dim_relenc, dropout = dropout),
                 FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
 
@@ -176,7 +176,7 @@ class ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
-        self.translution = Translution((image_height // patch_height, image_width // patch_width), dim, depth, heads, dim_head, mlp_dim, dim_relenc, dropout)
+        self.translution = TNN((image_height // patch_height, image_width // patch_width), dim, depth, heads, dim_head, mlp_dim, dim_relenc, dropout)
 
         self.pool = pool
         self.to_latent = nn.Identity()
