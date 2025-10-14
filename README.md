@@ -1,7 +1,7 @@
 # [Translution: Unifying Self-attention and Convolution for Adaptive and Relative Modeling](https://www.techrxiv.org/users/867895/articles/1291580-translution-unifying-self-attention-and-convolution-for-adaptive-and-relative-modeling)
 
 ⚠️ *Please note that a full Translution Neural Network requires a large amount of GPU memory—beyond what most current devices can provide.
-However, you can replace individual Self-Attention layers with Translution in Transformers, which may yield surprisingly strong performance improvements.*
+However, you can replace individual Self-Attention layers with Translution in Transformers, which may yield surprisingly performance improvements.*
 
 ## Code Index 
 * Image (2D): • [Translution](https://github.com/hehefan/Translution/blob/main/ViT/models/translution.py)   • [α-Translution](https://github.com/hehefan/Translution/blob/main/ViT/models/alpha_translution.py)
