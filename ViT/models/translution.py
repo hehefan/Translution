@@ -10,6 +10,29 @@ from einops.layers.torch import Rearrange
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
+class SharedParameter(nn.Module):
+    def __init__(self, height, width, in_dim, out_dim):
+        super().__init__()
+        num_img_tokens = (2*height-1) * (2*width-1)
+        self.unique_params = nn.Parameter(torch.empty(num_img_tokens, in_dim, out_dim))
+        torch.nn.init.kaiming_uniform_(self.unique_params, a=math.sqrt(5))
+
+        index_map = []
+        for x in range(height):
+            for y in range(width):
+                tmp = []
+                for i in range(height):
+                    for j in range(width):
+                        dx = x - i + height - 1
+                        dy = y - j + width - 1
+                        tmp.append(dx*(2*width-1) + dy)
+                index_map.append(tmp)
+        self.index_map = torch.tensor(index_map)
+
+    def forward(self):
+        weight = self.unique_params[self.index_map]
+        return weight
+    
 # relative cls token 
 class SharedParameterRelCls(nn.Module):
     def __init__(self, height, width, in_dim, out_dim):
