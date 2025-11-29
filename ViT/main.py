@@ -28,7 +28,7 @@ model_names = sorted(name for name in models.__dict__
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('data', metavar='DIR', nargs='?', default='/data/fhh/imagenet',
                     help='path to dataset (default: imagenet)')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_vit_tiny',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='kvlution_vit_tiny',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
