@@ -4,9 +4,9 @@
 However, you can replace individual Self-Attention layers with Translution in Transformers, which may yield surprisingly performance improvements.*
 
 ## Code Index 
-* Image (2D): • [Translution](https://github.com/hehefan/Translution/blob/main/ViT/models/translution.py)   • [α-Translution](https://github.com/hehefan/Translution/blob/main/ViT/models/alpha_translution.py)
+* Image (2D): • [Translution](https://github.com/hehefan/Translution/blob/main/ViT/models/translution.py)   • [LoR-Translution](https://github.com/hehefan/Translution/blob/main/ViT/models/alpha_translution.py)
 
-* Language (1D): • [Translution](https://github.com/hehefan/Translution/blob/main/GPT/models/translution.py)   • [α-Translution](https://github.com/hehefan/Translution/blob/main/GPT/models/alpha_translution.py)
+* Language (1D): • [Translution](https://github.com/hehefan/Translution/blob/main/GPT/models/translution.py)   • [LoR-Translution](https://github.com/hehefan/Translution/blob/main/GPT/models/alpha_translution.py)
 
 ## Abstract
 
