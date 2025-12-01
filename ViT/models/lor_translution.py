@@ -604,7 +604,7 @@ class ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
-        self.translution = LoR_TNN((tnn_type, image_height // patch_height, image_width // patch_width), dim, depth, heads, dim_head, mlp_dim, dim_relenc, dropout)
+        self.translution = LoR_TNN(tnn_type, (image_height // patch_height, image_width // patch_width), dim, depth, heads, dim_head, mlp_dim, dim_relenc, dropout)
 
         self.pool = pool
         self.to_latent = nn.Identity()
