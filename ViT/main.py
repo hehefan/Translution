@@ -40,7 +40,7 @@ parser.add_argument('--patch-size', default=56, type=int, metavar='N',
                         'into before being processed (default: 56)')
 parser.add_argument('--relenc-dim', default=8, type=int, metavar='N',
                     help='relative encoding dimension for the Value of ' +
-                        'alpha-Translution (default: 8)')
+                        'LoR-Translution (default: 8)')
 parser.add_argument('-j', '--workers', default=16, type=int, metavar='N',
                     help='number of data loading workers (default: 16)')
 parser.add_argument('--epochs', default=300, type=int, metavar='N',
@@ -144,7 +144,7 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
-    if args.arch.startswith("alution"):
+    if args.arch.startswith("lor"):
         print("=> creating model '{}' with patch size '{}', reltive encoding dim '{}'".format(args.arch, args.patch_size, args.relenc_dim))
         model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, dim_relenc = args.relenc_dim, num_classes = 1000)
     else:
