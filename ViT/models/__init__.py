@@ -1,17 +1,16 @@
-from .transformer import former_vit_tiny, former_vit_mini, former_vit_small, former_vit_base, former_vit_large
-# do not use qkvlution, it adds parameters but does not improve accuracy compared with kv or qvlution
-from .translution import qkvlution_vit_tiny, qkvlution_vit_mini, qkvlution_vit_small, qkvlution_vit_base, qkvlution_vit_large
-from .translution import kvlution_vit_tiny, kvlution_vit_mini, kvlution_vit_small, kvlution_vit_base, kvlution_vit_large
-from .translution import qvlution_vit_tiny, qvlution_vit_mini, qvlution_vit_small, qvlution_vit_base, qvlution_vit_large
-from .translution import qklution_vit_tiny, qklution_vit_mini, qklution_vit_small, qklution_vit_base, qklution_vit_large
-from .translution import qlution_vit_tiny, qlution_vit_mini, qlution_vit_small, qlution_vit_base, qlution_vit_large
-from .translution import klution_vit_tiny, klution_vit_mini, klution_vit_small, klution_vit_base, klution_vit_large
-from .translution import vlution_vit_tiny, vlution_vit_mini, vlution_vit_small, vlution_vit_base, vlution_vit_large
-# do not use lor_qkvlution, it adds parameters but does not improve accuracy compared with lor_kv or lor_qvlution
-from .lor_translution import lor_qkvlution_vit_tiny, lor_qkvlution_vit_mini, lor_qkvlution_vit_small, lor_qkvlution_vit_base, lor_qkvlution_vit_large
-from .lor_translution import lor_kvlution_vit_tiny, lor_kvlution_vit_mini, lor_kvlution_vit_small, lor_kvlution_vit_base, lor_kvlution_vit_large
-from .lor_translution import lor_qvlution_vit_tiny, lor_qvlution_vit_mini, lor_qvlution_vit_small, lor_qvlution_vit_base, lor_qvlution_vit_large
-from .lor_translution import lor_qklution_vit_tiny, lor_qklution_vit_mini, lor_qklution_vit_small, lor_qklution_vit_base, lor_qklution_vit_large
-from .lor_translution import lor_qlution_vit_tiny, lor_qlution_vit_mini, lor_qlution_vit_small, lor_qlution_vit_base, lor_qlution_vit_large
-from .lor_translution import lor_klution_vit_tiny, lor_klution_vit_mini, lor_klution_vit_small, lor_klution_vit_base, lor_klution_vit_large
-from .lor_translution import lor_vlution_vit_tiny, lor_vlution_vit_mini, lor_vlution_vit_small, lor_vlution_vit_base, lor_vlution_vit_large
+# do not use qkv variant, it adds parameters but does not improve accuracy compared with kv or qv variant
+from .transformer import former_tiny, former_mini, former_small, former_base, former_large
+from .translution import qkv_tiny, qkv_mini, qkv_small, qkv_base, qkv_large
+from .translution import kv_tiny, kv_mini, kv_small, kv_base, kv_large
+from .translution import qv_tiny, qv_mini, qv_small, qv_base, qv_large
+from .translution import qk_tiny, qk_mini, qk_small, qk_base, qk_large
+from .translution import q_tiny, q_mini, q_small, q_base, q_large
+from .translution import k_tiny, k_mini, k_small, k_base, k_large
+from .translution import v_tiny, v_mini, v_small, v_base, v_large
+from .lor_translution import lor_qkv_tiny, lor_qkv_mini, lor_qkv_small, lor_qkv_base, lor_qkv_large
+from .lor_translution import lor_kv_tiny, lor_kv_mini, lor_kv_small, lor_kv_base, lor_kv_large
+from .lor_translution import lor_qv_tiny, lor_qv_mini, lor_qv_small, lor_qv_base, lor_qv_large
+from .lor_translution import lor_qk_tiny, lor_qk_mini, lor_qk_small, lor_qk_base, lor_qk_large
+from .lor_translution import lor_q_tiny, lor_q_mini, lor_q_small, lor_q_base, lor_q_large
+from .lor_translution import lor_k_tiny, lor_k_mini, lor_k_small, lor_k_base, lor_k_large
+from .lor_translution import lor_v_tiny, lor_v_mini, lor_v_small, lor_v_base, lor_v_large
