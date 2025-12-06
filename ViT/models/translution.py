@@ -75,8 +75,6 @@ class FeedForward(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-# do not use QKVTranslution; 
-# it adds parameters but does not improve accuracy compared with KV or QVTranslution.
 class QKVTranslution(nn.Module):
     def __init__(self, hw_size, dim, heads = 8, dim_head = 64, dropout = 0.):
         super().__init__()
@@ -452,15 +450,69 @@ class VTranslution(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         return self.to_out(out)
 
-class TNN(nn.Module):
-    def __init__(self, tnn_type, hw_size, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
+class Attention(nn.Module):
+    def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0.):
         super().__init__()
+        inner_dim = dim_head *  heads
+        project_out = not (heads == 1 and dim_head == dim)
+
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+
+        self.norm = nn.LayerNorm(dim)
+
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+        
+        self.attend = nn.Softmax(dim = -1)
+        self.dropout = nn.Dropout(dropout)
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout)
+        ) if project_out else nn.Identity()
+
+    def forward(self, x):
+        x = self.norm(x)
+
+        qkv = self.to_qkv(x).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+
+        attn = self.attend(dots)
+        attn = self.dropout(attn)
+
+        out = torch.matmul(attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        return self.to_out(out)
+    
+class TNN(nn.Module):
+    def __init__(self, tnn_type,  hw_size, dim, depth, heads, dim_head, mlp_dim, dropout = 0., tln_num = None):
+        super().__init__()
+
         self.norm = nn.LayerNorm(dim)
         self.layers = nn.ModuleList([])
-        for _ in range(depth):
-            self.layers.append(nn.ModuleList([
-                tnn_type(hw_size, dim, heads = heads, dim_head = dim_head, dropout = dropout),
-                FeedForward(dim, mlp_dim, dropout = dropout)
+
+        if tln_num is not None: # hybrid
+            assert tln_num <= depth, (
+                f"Number of Translution layers must be smaller than the network depth: "
+                f"tln_num={tln_num}, depth={depth}"
+            )
+            for _ in range(tln_num):
+                self.layers.append(nn.ModuleList([
+                    tnn_type(hw_size, dim, heads = heads, dim_head = dim_head, dropout = dropout),
+                    FeedForward(dim, mlp_dim, dropout = dropout)
+            ]))
+            for _ in range(depth - tln_num):
+                self.layers.append(nn.ModuleList([
+                    Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout),
+                    FeedForward(dim, mlp_dim, dropout = dropout)
+            ]))
+        else:
+            for _ in range(depth):
+                self.layers.append(nn.ModuleList([
+                    tnn_type(hw_size, dim, heads = heads, dim_head = dim_head, dropout = dropout),
+                    FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
 
     def forward(self, x):
@@ -470,9 +522,8 @@ class TNN(nn.Module):
 
         return self.norm(x)
     
-
 class ViT(nn.Module):
-    def __init__(self, *, tnn_type, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0., pos_embedding = False):
+    def __init__(self, *, tnn_type, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0., tln_num = None, pos_embedding = False):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
@@ -496,7 +547,7 @@ class ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
-        self.translution = TNN(tnn_type, (image_height // patch_height, image_width // patch_width), dim, depth, heads, dim_head, mlp_dim, dropout)
+        self.translution = TNN(tnn_type, (image_height // patch_height, image_width // patch_width), dim, depth, heads, dim_head, mlp_dim, dropout, tln_num)
 
         self.pool = pool
         self.to_latent = nn.Identity()
@@ -520,7 +571,7 @@ class ViT(nn.Module):
         x = self.to_latent(x)
         return self.mlp_head(x)
 
-def qkvlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def qkv_tiny(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -532,9 +583,10 @@ def qkvlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qkvlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def qkv_mini(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -546,9 +598,10 @@ def qkvlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0., 
+               tln_num = tln_num) 
 
-def qkvlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def qkv_small(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -560,9 +613,10 @@ def qkvlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qkvlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def qkv_base(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -574,9 +628,10 @@ def qkvlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qkvlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def qkv_large(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -588,9 +643,10 @@ def qkvlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def kvlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def kv_tiny(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -602,9 +658,10 @@ def kvlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def kvlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def kv_mini(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -616,9 +673,10 @@ def kvlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def kvlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def kv_small(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -630,9 +688,10 @@ def kvlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def kvlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def kv_base(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -644,9 +703,10 @@ def kvlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def kvlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def kv_large(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -658,10 +718,11 @@ def kvlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
 
-def qklution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def qk_tiny(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -673,9 +734,10 @@ def qklution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qklution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def qk_mini(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -687,9 +749,10 @@ def qklution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qklution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def qk_small(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -701,9 +764,10 @@ def qklution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qklution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def qk_base(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -715,9 +779,10 @@ def qklution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qklution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def qk_large(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QKTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -729,10 +794,11 @@ def qklution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
 
-def qvlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def qv_tiny(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -744,9 +810,10 @@ def qvlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qvlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def qv_mini(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -758,9 +825,10 @@ def qvlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qvlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def qv_small(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -772,9 +840,10 @@ def qvlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qvlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def qv_base(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -786,9 +855,10 @@ def qvlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qvlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def qv_large(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QVTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -800,9 +870,10 @@ def qvlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def q_tiny(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -814,9 +885,10 @@ def qlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def q_mini(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -828,9 +900,10 @@ def qlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def q_small(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -842,9 +915,10 @@ def qlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def q_base(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -856,9 +930,10 @@ def qlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def qlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def q_large(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = QTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -870,9 +945,10 @@ def qlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def klution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def k_tiny(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -884,9 +960,10 @@ def klution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def klution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def k_mini(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -898,9 +975,10 @@ def klution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def klution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def k_small(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -912,9 +990,10 @@ def klution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def klution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def k_base(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -926,9 +1005,10 @@ def klution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def klution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def k_large(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = KTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -940,9 +1020,10 @@ def klution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def vlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def v_tiny(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = VTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -954,9 +1035,10 @@ def vlution_vit_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def vlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def v_mini(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = VTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -968,9 +1050,10 @@ def vlution_vit_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def vlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def v_small(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = VTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -982,9 +1065,10 @@ def vlution_vit_small(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def vlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def v_base(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = VTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -996,9 +1080,10 @@ def vlution_vit_base(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
 
-def vlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def v_large(image_size = 224, patch_size = 16, num_classes = 1000, tln_num = None):
     return ViT(tnn_type = VTranslution,
                image_size = image_size,
                patch_size = patch_size,
@@ -1010,4 +1095,5 @@ def vlution_vit_large(image_size = 224, patch_size = 16, num_classes = 1000):
                channels = 3,
                dim_head = 64, 
                dropout = 0., 
-               emb_dropout = 0.) 
+               emb_dropout = 0.,
+               tln_num = tln_num) 
