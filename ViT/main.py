@@ -151,17 +151,17 @@ def main_worker(gpu, ngpus_per_node, args):
     # create model
     if args.tln_num > 0: # hybrid 
         if args.arch.startswith("lor"):
-            print("=> creating hybrid model '{}' with patch size {}, reltive encoding dim {}, {} Translution layers".format(args.arch, args.patch_size, args.relenc_dim, args.tln_num))
+            print("=> creating hybrid '{}' model with patch size {}, reltive encoding dim {}, {} Translution layers".format(args.arch, args.patch_size, args.relenc_dim, args.tln_num))
             model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, dim_relenc = args.relenc_dim, num_classes = 1000, tln_num = args.tln_num)
         else:
-            print("=> creating hybrid model '{}' with patch size {}, {} Translution layers".format(args.arch, args.patch_size, args.tln_num))
+            print("=> creating hybrid '{}' model with patch size {}, {} Translution layers".format(args.arch, args.patch_size, args.tln_num))
             model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, num_classes = 1000, tln_num = args.tln_num)
     else:
         if args.arch.startswith("lor"):
-            print("=> creating model '{}' with patch size {}, reltive encoding dim {}".format(args.arch, args.patch_size, args.relenc_dim))
+            print("=> creating '{}' model with patch size {}, reltive encoding dim {}".format(args.arch, args.patch_size, args.relenc_dim))
             model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, dim_relenc = args.relenc_dim, num_classes = 1000)
         else:
-            print("=> creating model '{}' with patch size {}".format(args.arch, args.patch_size))
+            print("=> creating '{}' model with patch size {}".format(args.arch, args.patch_size))
             model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, num_classes = 1000)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("Total parameters: {}".format(total_params))
