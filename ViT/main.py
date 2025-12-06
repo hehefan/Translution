@@ -6,6 +6,8 @@ import time
 import warnings
 from enum import Enum
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
+
 import torch
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
@@ -28,19 +30,22 @@ model_names = sorted(name for name in models.__dict__
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('data', metavar='DIR', nargs='?', default='/data/fhh/imagenet',
                     help='path to dataset (default: imagenet)')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='kvlution_vit_tiny',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='lor_v_tiny',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: alution_vit_tiny)')
+                        ' (default: lor_v_tiny)')
 parser.add_argument('--image-size', default=224, type=int, metavar='N',
                     help='resolution of the input image (default: 224)')
 parser.add_argument('--patch-size', default=56, type=int, metavar='N',
                     help='size of each patch that an image is divided ' + 
                         'into before being processed (default: 56)')
 parser.add_argument('--relenc-dim', default=8, type=int, metavar='N',
-                    help='relative encoding dimension for the Value of ' +
+                    help='relative encoding dimension for ' +
                         'LoR-Translution (default: 8)')
+parser.add_argument('--tln-num', default=0, type=int, metavar='N',
+                    help='number of Translution layers for ' +
+                        'hybrid TNN (default: 0, not hybrid)')
 parser.add_argument('-j', '--workers', default=16, type=int, metavar='N',
                     help='number of data loading workers (default: 16)')
 parser.add_argument('--epochs', default=300, type=int, metavar='N',
@@ -144,12 +149,20 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
-    if args.arch.startswith("lor"):
-        print("=> creating model '{}' with patch size '{}', reltive encoding dim '{}'".format(args.arch, args.patch_size, args.relenc_dim))
-        model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, dim_relenc = args.relenc_dim, num_classes = 1000)
+    if args.tln_num > 0: # hybrid 
+        if args.arch.startswith("lor"):
+            print("=> creating hybrid model '{}' with patch size {}, reltive encoding dim {}, {} Translution layers".format(args.arch, args.patch_size, args.relenc_dim, args.tln_num))
+            model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, dim_relenc = args.relenc_dim, num_classes = 1000, tln_num = args.tln_num)
+        else:
+            print("=> creating hybrid model '{}' with patch size {}, {} Translution layers".format(args.arch, args.patch_size, args.tln_num))
+            model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, num_classes = 1000, tln_num = args.tln_num)
     else:
-        print("=> creating model '{}' with patch size '{}'".format(args.arch, args.patch_size))
-        model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, num_classes = 1000)
+        if args.arch.startswith("lor"):
+            print("=> creating model '{}' with patch size {}, reltive encoding dim {}".format(args.arch, args.patch_size, args.relenc_dim))
+            model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, dim_relenc = args.relenc_dim, num_classes = 1000)
+        else:
+            print("=> creating model '{}' with patch size {}".format(args.arch, args.patch_size))
+            model = models.__dict__[args.arch](image_size = args.image_size, patch_size = args.patch_size, num_classes = 1000)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("Total parameters: {}".format(total_params))
 
@@ -307,7 +320,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
-                  
+       
     print('Best Top-1: {}, Best Top-5: {}'.format(best_acc1, best_acc5))
 
 
