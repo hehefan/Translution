@@ -4,7 +4,10 @@ import random
 import shutil
 import time
 import warnings
+import numpy as np
 from enum import Enum
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -29,19 +32,22 @@ model_names = sorted(name for name in models.__dict__
 parser = argparse.ArgumentParser(description='PyTorch OpenWebText Training')
 parser.add_argument('data', metavar='DIR', nargs='?', default='/data/fhh/openwebtext',
                     help='path to dataset (default: openwebtext)')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='alution_gpt_tiny',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='lor_k_tiny',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: alution_gpt_tiny)')
-parser.add_argument('--seq-len', default=160, type=int, metavar='N',
+                        ' (default: lor_k_tiny)')
+parser.add_argument('--seq-len', default=256, type=int, metavar='N',
                     help='sequence length or context length that refers to the maximum number of ' + 
                         'tokens the model can process in a single forward pass. (default: 256)')
 parser.add_argument('--vocab-size', default=50257, type=int, metavar='N',
                     help='number of unique tokens in the tokenizer vocabulary (default: 50,257)')
 parser.add_argument('--relenc-dim', default=8, type=int, metavar='N',
-                    help='relative encoding dimension for the Value of ' +
-                        'alpha-Translution (default: 8)')
+                    help='relative encoding dimension for ' +
+                        'LoR-Translution (default: 8)')
+parser.add_argument('--tln-num', default=0, type=int, metavar='N',
+                    help='number of Translution layers for ' +
+                        'hybrid TNN (default: 0, not hybrid)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=300, type=int, metavar='N',
@@ -148,13 +154,22 @@ def main_worker(gpu, ngpus_per_node, args):
             args.rank = args.rank * ngpus_per_node + gpu
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
+        
     # create model
-    if args.arch.startswith("alution"):
-        print("=> creating model '{}' with sequence len '{}', vocab size '{}', reltive encoding dim '{}'".format(args.arch, args.seq_len, args.vocab_size, args.relenc_dim))
-        model = models.__dict__[args.arch](seq_len = args.seq_len, vocab_size = args.vocab_size, dim_relenc = args.relenc_dim)
+    if args.tln_num > 0: # hybrid 
+        if args.arch.startswith("lor"):
+            print("=> creating hybrid '{}' model with sequence len {}, reltive encoding dim {}, {} Translution layers".format(args.arch, args.seq_len, args.relenc_dim, args.tln_num))
+            model = models.__dict__[args.arch](seq_len = args.seq_len, vocab_size = args.vocab_size, dim_relenc = args.relenc_dim, tln_num = args.tln_num)
+        else:
+            print("=> creating hybrid '{}' model with sequence len {}, {} Translution layers".format(args.arch, args.seq_len, args.tln_num))
+            model = models.__dict__[args.arch](seq_len = args.seq_len, vocab_size = args.vocab_size, tln_num = args.tln_num)
     else:
-        print("=> creating model '{}' with sequence len '{}', vocab size '{}'".format(args.arch, args.seq_len, args.vocab_size))
-        model = models.__dict__[args.arch](seq_len = args.seq_len, vocab_size = args.vocab_size)
+        if args.arch.startswith("lor"):
+            print("=> creating '{}' model with sequence len {}, reltive encoding dim {}".format(args.arch, args.seq_len, args.relenc_dim))
+            model = models.__dict__[args.arch](seq_len = args.seq_len, vocab_size = args.vocab_size, dim_relenc = args.relenc_dim)
+        else:
+            print("=> creating '{}' model with sequence len {}".format(args.arch, args.seq_len))
+            model = models.__dict__[args.arch](seq_len = args.seq_len, vocab_size = args.vocab_size)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("Total parameters: {}".format(total_params))
 
@@ -286,8 +301,9 @@ def main_worker(gpu, ngpus_per_node, args):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
-            
+                    
     print('Minimal loss: {}'.format(min_loss))
+    print('Minimal perplexity: {}'.format(np.exp(min_loss)))
 
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
     batch_time = AverageMeter('Time', ':6.3f')
