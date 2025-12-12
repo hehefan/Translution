@@ -123,7 +123,7 @@ class QKVTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)                                   # b h n n
 
-        # sum
+        # weighted sum
         out = attn.unsqueeze(-1) * v                                # b h n n d
         out = torch.sum(out, dim=3, keepdim=False)                  # b h n d
  
@@ -180,7 +180,7 @@ class KVTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)                                   # b h n n
 
-        # sum
+        # weighted sum
         out = attn.unsqueeze(-1) * v                                # b h n n d
         out = torch.sum(out, dim=3, keepdim=False)                  # b h n d
  
@@ -236,7 +236,7 @@ class QKTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)                                   # b h n n
 
-        # sum
+        # weighted sum
         out = torch.matmul(attn, v)
  
         # output
@@ -292,7 +292,7 @@ class QVTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)                                   # b h n n
 
-        # sum
+        # weighted sum
         out = attn.unsqueeze(-1) * v                                # b h n n d
         out = torch.sum(out, dim=3, keepdim=False)                  # b h n d
  
@@ -343,7 +343,7 @@ class QTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)                                   # b h n n                                  
 
-        # sum
+        # weighted sum
         out = torch.matmul(attn, v)
  
         # output
@@ -393,7 +393,7 @@ class KTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)                                   # b h n n                                  
 
-        # sum
+        # weighted sum
         out = torch.matmul(attn, v)
  
         # output
@@ -442,7 +442,7 @@ class VTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)                                   
 
-        # sum
+        # weighted sum
         out = attn.unsqueeze(-1) * v                                # b h n n d
         out = torch.sum(out, dim=3, keepdim=False)                  # b h n d
  
