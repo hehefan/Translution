@@ -143,11 +143,11 @@ class LoR_QKVTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)
 
-        # output1
+        # weighted sum 1
         out1 = torch.matmul(attn, v1) 
         out1 = rearrange(out1, 'b h n d -> b n (h d)')
 
-        # output2
+        # weighted sum 2
         out2 = attn.unsqueeze(-1) * v2                                  # b h n n d
         out2 = torch.sum(out2, dim=3, keepdim=False)                    # b h n d
         out2 = rearrange(out2, 'b h n d -> b n (h d)')
@@ -221,11 +221,11 @@ class LoR_KVTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)
 
-        # output1
+        # weighted sum 1
         out1 = torch.matmul(attn, v1) 
         out1 = rearrange(out1, 'b h n d -> b n (h d)')
 
-        # output2
+        # weighted sum 2
         out2 = attn.unsqueeze(-1) * v2                                  # b h n n d
         out2 = torch.sum(out2, dim=3, keepdim=False)                    # b h n d
         out2 = rearrange(out2, 'b h n d -> b n (h d)')
@@ -291,7 +291,7 @@ class LoR_QKTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)
 
-        # output
+        # weighted sum 
         out = torch.matmul(attn, v) 
         out = rearrange(out, 'b h n d -> b n (h d)')
 
@@ -363,11 +363,11 @@ class LoR_QVTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)
 
-        # output1
+        # weighted sum 1
         out1 = torch.matmul(attn, v1) 
         out1 = rearrange(out1, 'b h n d -> b n (h d)')
 
-        # output2
+        # weighted sum 2
         out2 = attn.unsqueeze(-1) * v2                                  # b h n n d
         out2 = torch.sum(out2, dim=3, keepdim=False)                    # b h n d
         out2 = rearrange(out2, 'b h n d -> b n (h d)')
@@ -422,7 +422,6 @@ class LoR_QTranslution(nn.Module):
         k2 = rearrange(k2, 'b n (h d) -> b h n d', h = self.heads)      # b h n d
         k2 = k2.unsqueeze(2)                                            # b h 1 n d
 
-
         # attention
         dots1 = torch.matmul(q1, k1.transpose(-1, -2))
         dots2 = torch.sum(q2*k2, dim=4, keepdim=False)
@@ -431,7 +430,7 @@ class LoR_QTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)
 
-        # output
+        # weighted sum 
         out = torch.matmul(attn, v) 
         out = rearrange(out, 'b h n d -> b n (h d)')
 
@@ -492,7 +491,7 @@ class LoR_KTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)
 
-        # output
+        # weighted sum 
         out = torch.matmul(attn, v) 
         out = rearrange(out, 'b h n d -> b n (h d)')
 
@@ -545,11 +544,11 @@ class LoR_VTranslution(nn.Module):
         attn = self.attend(dots)
         attn = self.dropout(attn)
 
-        # output1
+        # weighted sum 1
         out1 = torch.matmul(attn, v1) 
         out1 = rearrange(out1, 'b h n d -> b n (h d)')
 
-        # output2
+        # weighted sum 2
         out2 = attn.unsqueeze(-1) * v2                                  # b h n n d
         out2 = torch.sum(out2, dim=3, keepdim=False)                    # b h n d
         out2 = rearrange(out2, 'b h n d -> b n (h d)')
