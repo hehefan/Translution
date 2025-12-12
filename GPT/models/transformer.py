@@ -108,7 +108,7 @@ class GPT(nn.Module):
 
         return self.output_head(x)
 
-def former_gpt_tiny(seq_len, vocab_size):
+def former_tiny(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
@@ -119,7 +119,7 @@ def former_gpt_tiny(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def former_gpt_mini(seq_len, vocab_size):
+def former_mini(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
@@ -130,7 +130,7 @@ def former_gpt_mini(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def former_gpt_small(seq_len, vocab_size):
+def former_small(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 384,
@@ -141,7 +141,7 @@ def former_gpt_small(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.)
  
-def former_gpt_base(seq_len, vocab_size):
+def former_base(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 768,
@@ -152,7 +152,7 @@ def former_gpt_base(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def former_gpt_large(seq_len, vocab_size):
+def former_large(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 1024,
