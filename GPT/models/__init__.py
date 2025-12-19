@@ -1,4 +1,5 @@
 from .transformer import former_tiny, former_mini, former_small, former_base, former_large
+from .rope_transformer import rope_tiny, rope_mini, rope_small, rope_base, rope_large
 from .translution import qkv_tiny, qkv_mini, qkv_small, qkv_base, qkv_large
 from .translution import kv_tiny, kv_mini, kv_small, kv_base, kv_large
 from .translution import qv_tiny, qv_mini, qv_small, qv_base, qv_large
