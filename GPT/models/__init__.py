@@ -1,7 +1,15 @@
 from .transformer import former_tiny, former_mini, former_small, former_base, former_large
+from .translution import qkv_tiny, qkv_mini, qkv_small, qkv_base, qkv_large
 from .translution import kv_tiny, kv_mini, kv_small, kv_base, kv_large
+from .translution import qv_tiny, qv_mini, qv_small, qv_base, qv_large
+from .translution import qk_tiny, qk_mini, qk_small, qk_base, qk_large
+from .translution import q_tiny, q_mini, q_small, q_base, q_large
 from .translution import k_tiny, k_mini, k_small, k_base, k_large
 from .translution import v_tiny, v_mini, v_small, v_base, v_large
+from .lor_translution import lor_qkv_tiny, lor_qkv_mini, lor_qkv_small, lor_qkv_base, lor_qkv_large
+from .lor_translution import lor_qk_tiny, lor_qk_mini, lor_qk_small, lor_qk_base, lor_qk_large
+from .lor_translution import lor_qv_tiny, lor_qv_mini, lor_qv_small, lor_qv_base, lor_qv_large
 from .lor_translution import lor_kv_tiny, lor_kv_mini, lor_kv_small, lor_kv_base, lor_kv_large
+from .lor_translution import lor_q_tiny, lor_q_mini, lor_q_small, lor_q_base, lor_q_large
 from .lor_translution import lor_k_tiny, lor_k_mini, lor_k_small, lor_k_base, lor_k_large
 from .lor_translution import lor_v_tiny, lor_v_mini, lor_v_small, lor_v_base, lor_v_large
