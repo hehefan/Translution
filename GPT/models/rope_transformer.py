@@ -8,23 +8,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import torch
-from torch import nn
-
-class RotaryPositionalEmbeddings(nn.Module):
-    def __init__(self, d: int, base: int = 10_000, max_seq_len: int = 2048):
+class RotaryPositionalEmbedding(nn.Module):
+    def __init__(self, dim: int, max_seq_len: int = 2048, base: int = 10000):
         super().__init__()
-        # d: the head dimension (not the total model dimension)
-        self.d = d
-        self.base = base
+        # dim: the head dimension (not the total model dimension)
         
-        # Precompute cos and sin values
-        inv_freq = 1.0 / (base ** (torch.arange(0, d, 2).float() / d))
+        inv_freq = 1.0 / (base ** (torch.arange(0, d, 2).float() / dim))
         t = torch.arange(max_seq_len).type_as(inv_freq)
         freqs = torch.einsum('i,j->ij', t, inv_freq)
         emb = torch.cat((freqs, freqs), dim=-1)
-        
-        # Register as buffers so they are saved with the model but not updated by optimizer
+
         self.register_buffer('cos_cached', emb.cos()[None, None, :, :])
         self.register_buffer('sin_cached', emb.sin()[None, None, :, :])
 
@@ -44,8 +37,9 @@ def rotate_half(x):
 def apply_rotary_pos_emb(x, cos, sin):
     """
     Apply rotary embeddings to input x.
-    x: [batch, heads, seq_len, head_dim]
-    cos, sin: [1, 1, seq_len, head_dim]
+    x:   [batch, heads, seq_len, head_dim]
+    cos: [1,     1,     seq_len, head_dim]
+    cos: [1,     1,     seq_len, head_dim]
     """
     return (x * cos) + (rotate_half(x) * sin)
 
@@ -80,7 +74,7 @@ class Attention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.register_buffer("causal", torch.tril(torch.ones(seq_len, seq_len)).view(1, 1, seq_len, seq_len))
 
-        self.rotary_emb = RotaryPositionalEmbeddings(dim_head, max_seq_len=seq_len)
+        self.rotary_emb = RotaryPositionalEmbedding(dim_head, seq_len)
 
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
 
@@ -97,10 +91,7 @@ class Attention(nn.Module):
         qkv = self.to_qkv(x).chunk(3, dim = -1)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
 
-        # Get cos and sin for the current sequence length T
         cos, sin = self.rotary_emb(v, seq_len=n)
-
-        # Apply RoPE to q and k
         q = apply_rotary_pos_emb(q, cos, sin)
         k = apply_rotary_pos_emb(k, cos, sin)
 
