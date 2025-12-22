@@ -278,7 +278,7 @@ class ViT(nn.Module):
         x = self.to_latent(x)
         return self.mlp_head(x)
 
-def rope_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
+def rope_former_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
@@ -291,7 +291,7 @@ def rope_tiny(image_size = 224, patch_size = 16, num_classes = 1000):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def rope_mini(image_size = 224, patch_size = 16, num_classes = 1000):
+def rope_former_mini(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
@@ -304,7 +304,7 @@ def rope_mini(image_size = 224, patch_size = 16, num_classes = 1000):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def rope_small(image_size = 224, patch_size = 16, num_classes = 1000):
+def rope_former_small(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
@@ -317,7 +317,7 @@ def rope_small(image_size = 224, patch_size = 16, num_classes = 1000):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def rope_base(image_size = 224, patch_size = 16, num_classes = 1000):
+def rope_former_base(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
@@ -330,7 +330,7 @@ def rope_base(image_size = 224, patch_size = 16, num_classes = 1000):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def rope_large(image_size = 224, patch_size = 16, num_classes = 1000):
+def rope_former_large(image_size = 224, patch_size = 16, num_classes = 1000):
     return ViT(image_size = image_size,
                patch_size = patch_size,
                num_classes = num_classes,
