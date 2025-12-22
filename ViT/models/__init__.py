@@ -15,3 +15,5 @@ from .lor_translution import lor_qk_tiny, lor_qk_mini, lor_qk_small, lor_qk_base
 from .lor_translution import lor_q_tiny, lor_q_mini, lor_q_small, lor_q_base, lor_q_large
 from .lor_translution import lor_k_tiny, lor_k_mini, lor_k_small, lor_k_base, lor_k_large
 from .lor_translution import lor_v_tiny, lor_v_mini, lor_v_small, lor_v_base, lor_v_large
+from .rope_translution import rope_tiny, rope_mini, rope_small, rope_base, rope_large
+from .lor_rope_translution import lor_rope_tiny, lor_rope_mini, lor_rope_small, lor_rope_base, lor_rope_large
