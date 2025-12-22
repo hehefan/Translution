@@ -337,7 +337,7 @@ class LoR_TNN(nn.Module):
             )
             for _ in range(tln_num):
                 self.layers.append(nn.ModuleList([
-                    LoR_Translution(hw_size, dim, heads = heads, dim_head = dim_head, dim_relenc = dim_relenc, dropout = dropout),
+                    LoR_Translution(hw_size, dim, heads = heads, dim_head = dim_head, dim_relenc = dim_relenc, pool = pool, dropout = dropout),
                     FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
             for _ in range(depth - tln_num):
@@ -348,7 +348,7 @@ class LoR_TNN(nn.Module):
         else:
             for _ in range(depth):
                 self.layers.append(nn.ModuleList([
-                    LoR_Translution(hw_size, dim, heads = heads, dim_head = dim_head, dim_relenc = dim_relenc, dropout = dropout),
+                    LoR_Translution(hw_size, dim, heads = heads, dim_head = dim_head, dim_relenc = dim_relenc, pool = pool, dropout = dropout),
                     FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
 
