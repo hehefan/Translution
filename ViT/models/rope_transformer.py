@@ -168,7 +168,7 @@ class FeedForward(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class Attention(nn.Module):
+class RoPE2DAttention(nn.Module):
     def __init__(self, hw_size, dim, heads = 8, dim_head = 64, pool = 'cls', dropout = 0.):
         super().__init__()
         inner_dim = dim_head *  heads
@@ -221,7 +221,7 @@ class Transformer(nn.Module):
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                Attention(hw_size, dim, heads = heads, dim_head = dim_head, pool = pool, dropout = dropout),
+                RoPE2DAttention(hw_size, dim, heads = heads, dim_head = dim_head, pool = pool, dropout = dropout),
                 FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
 
