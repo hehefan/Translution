@@ -58,7 +58,7 @@ class FeedForward(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class Attention(nn.Module):
+class RoPE1DAttention(nn.Module):
     def __init__(self, seq_len, dim, heads = 8, dim_head = 64, dropout = 0.):
         super().__init__()
         self.seq_len = seq_len
@@ -112,7 +112,7 @@ class Transformer(nn.Module):
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                Attention(seq_len, dim, heads = heads, dim_head = dim_head, dropout = dropout),
+                RoPE1DAttention(seq_len, dim, heads = heads, dim_head = dim_head, dropout = dropout),
                 FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
 
@@ -152,7 +152,7 @@ class GPT(nn.Module):
 
         return self.output_head(x)
 
-def rope_tiny(seq_len, vocab_size):
+def rope_former_tiny(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
@@ -163,7 +163,7 @@ def rope_tiny(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def rope_mini(seq_len, vocab_size):
+def rope_former_mini(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 192,
@@ -174,7 +174,7 @@ def rope_mini(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.)
 
-def rope_small(seq_len, vocab_size):
+def rope_former_small(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 384,
@@ -185,7 +185,7 @@ def rope_small(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.)
  
-def rope_base(seq_len, vocab_size):
+def rope_former_base(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 768,
@@ -196,7 +196,7 @@ def rope_base(seq_len, vocab_size):
                dropout = 0., 
                emb_dropout = 0.) 
 
-def rope_large(seq_len, vocab_size):
+def rope_former_large(seq_len, vocab_size):
     return GPT(seq_len = seq_len,
                vocab_size = vocab_size,
                dim = 1024,
