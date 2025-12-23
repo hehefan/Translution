@@ -310,6 +310,52 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         return self.to_out(out)
 
+class RoPE2DAttention(nn.Module):
+    def __init__(self, hw_size, dim, heads = 8, dim_head = 64, pool = 'cls', dropout = 0.):
+        super().__init__()
+        inner_dim = dim_head *  heads
+        project_out = not (heads == 1 and dim_head == dim)
+
+        self.height, self.width = hw_size
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+
+        self.norm = nn.LayerNorm(dim)
+
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+
+        if pool == 'cls':
+            self.rope = RoPE2DWithCLS(dim=dim_head, height=self.height, width=self.width)
+        else:
+            self.rope = RoPE2D(dim=dim_head, height=self.height, width=self.width)
+
+        self.attend = nn.Softmax(dim = -1)
+        self.dropout = nn.Dropout(dropout)
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout)
+        ) if project_out else nn.Identity()
+
+    def forward(self, x):
+        x = self.norm(x)
+
+        qkv = self.to_qkv(x).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+ 
+        # Apply Rotation
+        q = self.rope(q)
+        k = self.rope(k)
+
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+
+        attn = self.attend(dots)
+        attn = self.dropout(attn)
+
+        out = torch.matmul(attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        return self.to_out(out)
+        
 class TNN(nn.Module):
     def __init__(self, hw_size, dim, depth, heads, dim_head, mlp_dim, pool = 'cls', dropout = 0., tln_num = None):
         super().__init__()
@@ -329,7 +375,8 @@ class TNN(nn.Module):
             ]))
             for _ in range(depth - tln_num):
                 self.layers.append(nn.ModuleList([
-                    Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout),
+                    #Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout),
+                    RoPE2DAttention(hw_size, dim, heads = heads, dim_head = dim_head, pool = pool, dropout = dropout),
                     FeedForward(dim, mlp_dim, dropout = dropout)
             ]))
         else:
