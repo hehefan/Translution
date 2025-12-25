@@ -13,7 +13,7 @@ class RotaryPositionalEmbedding(nn.Module):
         super().__init__()
         # dim: the head dimension (not the total model dimension)
         
-        inv_freq = 1.0 / (base ** (torch.arange(0, d, 2).float() / dim))
+        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
         t = torch.arange(max_seq_len).type_as(inv_freq)
         freqs = torch.einsum('i,j->ij', t, inv_freq)
         emb = torch.cat((freqs, freqs), dim=-1)
