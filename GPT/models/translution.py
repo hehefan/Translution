@@ -465,7 +465,7 @@ class VTranslution(nn.Module):
         v = rearrange(v, 'b n m (h d) -> b h n m d', h = self.heads)# b h n n d
         
         # attention
-        dots = torch.sum(q*k, dim=4, keepdim=False) * self.scale
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
         # causual
         dots = dots.masked_fill(self.causal[:,:,:self.seq_len,:self.seq_len] == 0, float('-inf'))
         attn = self.attend(dots)
